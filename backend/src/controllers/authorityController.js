@@ -1,0 +1,74 @@
+// src/controllers/authorityController.js
+// Handles registration and login for Authority accounts (municipal officers).
+
+const Authority = require("../models/Authority");
+
+// ─── Register ─────────────────────────────────────────────────────────────────
+// POST /api/authorities/register
+// What it does: Creates a new authority account with a department.
+const register = async (req, res) => {
+    try {
+        const { name, email, password, department } = req.body;
+
+        // Check if email already taken
+        const existing = await Authority.findOne({ email });
+        if (existing) {
+            return res
+                .status(400)
+                .json({ success: false, message: "Email already registered" });
+        }
+
+        const authority = await Authority.create({ name, email, password, department });
+
+        res.status(201).json({
+            success: true,
+            message: "Authority registered successfully",
+            authority: {
+                _id: authority._id,
+                name: authority.name,
+                email: authority.email,
+                department: authority.department,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+// POST /api/authorities/login
+// What it does: Verifies authority credentials.
+const login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        const authority = await Authority.findOne({ email });
+        if (!authority) {
+            return res
+                .status(401)
+                .json({ success: false, message: "Invalid email or password" });
+        }
+
+        const isMatch = await authority.matchPassword(password);
+        if (!isMatch) {
+            return res
+                .status(401)
+                .json({ success: false, message: "Invalid email or password" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Login successful",
+            authority: {
+                _id: authority._id,
+                name: authority.name,
+                email: authority.email,
+                department: authority.department,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+module.exports = { register, login };
