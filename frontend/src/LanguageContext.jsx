@@ -1,6 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import en from "./translations/en.json";
 import hi from "./translations/hi.json";
+import bn from "./translations/bn.json";
+import gu from "./translations/gu.json";
+import mr from "./translations/mr.json";
+import ta from "./translations/ta.json";
+import te from "./translations/te.json";
 
 // Create context
 const LanguageContext = createContext();
@@ -9,6 +14,11 @@ const LanguageContext = createContext();
 const translations = {
   en,
   hi,
+  bn,
+  gu,
+  mr,
+  ta,
+  te,
 };
 
 export const LanguageProvider = ({ children }) => {

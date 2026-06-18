@@ -33,7 +33,7 @@ const Register = () => {
 
       // Automatically log them in after registration
       localStorage.setItem("user", JSON.stringify(response.data.user));
-      navigate("/dashboard");
+      navigate("/track-complaint");
       window.location.reload();
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed.");

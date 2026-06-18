@@ -29,8 +29,8 @@ const Login = () => {
       // Save user info locally
       localStorage.setItem("user", JSON.stringify(response.data.user));
       
-      // Navigate to dashboard
-      navigate("/dashboard");
+      // Navigate to the complaint tracker
+      navigate("/track-complaint");
       // Force refresh to update Navbar (easy trick)
       window.location.reload(); 
     } catch (err) {

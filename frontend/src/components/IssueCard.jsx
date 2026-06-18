@@ -15,7 +15,7 @@ const IssueCard = ({ title, description, imageUrl }) => {
       <div className="issue-card-body">
         <h3>{title}</h3>
         <p>{description}</p>
-        <Link to="/dashboard" className="btn" style={{ textAlign: "center", textDecoration: "none" }}>
+        <Link to="/track-complaint" className="btn" style={{ textAlign: "center", textDecoration: "none" }}>
           {t("issue_report_btn")}
         </Link>
       </div>
