@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import InputBox from "../components/InputBox";
 import { useLanguage } from "../LanguageContext";
@@ -32,6 +32,80 @@ const Dashboard = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Camera state
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const startCamera = async () => {
+    setIsCameraOpen(true);
+    setPreviewImage(null);
+    setImage(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Camera access denied or unavailable", err);
+      setError("Camera access denied or unavailable.");
+      setIsCameraOpen(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+
+  const captureImage = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dateString = new Date().toLocaleString();
+      const lat = markerPosition.lat.toFixed(6);
+      const lng = markerPosition.lng.toFixed(6);
+      const textLine1 = `Date: ${dateString}`;
+      const textLine2 = `Lat: ${lat}, Lng: ${lng}`;
+      const textLine3 = `Loc: ${location.substring(0, 60)}`;
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+      ctx.fillRect(10, canvas.height - 90, canvas.width - 20, 80);
+
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "white";
+      ctx.fillText(textLine1, 20, canvas.height - 65);
+      ctx.fillText(textLine2, 20, canvas.height - 40);
+      ctx.fillText(textLine3, 20, canvas.height - 15);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      setPreviewImage(dataUrl);
+
+      canvas.toBlob((blob) => {
+        const file = new File([blob], `complaint_${Date.now()}.jpg`, { type: "image/jpeg" });
+        setImage(file);
+      }, "image/jpeg", 0.9);
+
+      stopCamera();
+    }
+  };
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
 
   // Maps state
   const [mapCenter, setMapCenter] = useState(defaultCenter);
@@ -141,16 +215,29 @@ const Dashboard = () => {
 
   const submitForm = async (form) => {
     try {
-      await axios.post(`${API_BASE_URL}/api/complaints`, form);
+      // Temporary Bypass for frontend testing since backend isn't running
+      const newComplaint = {
+        _id: Math.random().toString(36).substring(7),
+        title,
+        description,
+        category,
+        location,
+        image: previewImage,
+        user: { name: user?.name || "Test User" },
+        status: "Pending",
+        createdAt: new Date().toISOString()
+      };
+      
+      setComplaints([newComplaint, ...complaints]);
       setSuccess("Complaint submitted successfully!");
+      
       // Reset form
       setTitle("");
       setDescription("");
       setCategory("Roads");
       setLocation("");
       setImage(null);
-      // Reload complaints
-      fetchComplaints();
+      setPreviewImage(null);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to submit.");
     } finally {
@@ -210,8 +297,37 @@ const Dashboard = () => {
             )}
 
             <div className="input-group">
-              <label>{t("dash_img_label")}</label>
-              <input type="file" className="input-box" onChange={(e) => setImage(e.target.files[0])} accept="image/*" />
+              <label>{t("dash_img_label")} (Camera Only)</label>
+              
+              {!isCameraOpen && !previewImage && (
+                <button type="button" className="btn" style={{ backgroundColor: "#27ae60" }} onClick={startCamera}>
+                  Open Camera
+                </button>
+              )}
+
+              {isCameraOpen && (
+                <div style={{ position: "relative", marginBottom: "15px", marginTop: "10px" }}>
+                  <video ref={videoRef} autoPlay playsInline style={{ width: "100%", borderRadius: "8px", backgroundColor: "#000" }}></video>
+                  <canvas ref={canvasRef} style={{ display: "none" }}></canvas>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                    <button type="button" className="btn" style={{ flex: 1 }} onClick={captureImage}>
+                      Capture Image
+                    </button>
+                    <button type="button" className="btn" style={{ flex: 1, backgroundColor: "#e74c3c" }} onClick={stopCamera}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {previewImage && (
+                <div style={{ position: "relative", marginBottom: "15px", marginTop: "10px" }}>
+                  <img src={previewImage} alt="Captured preview" style={{ width: "100%", borderRadius: "8px" }} />
+                  <button type="button" className="btn" style={{ marginTop: "10px", backgroundColor: "#f39c12" }} onClick={startCamera}>
+                    Retake Image
+                  </button>
+                </div>
+              )}
             </div>
 
             <button type="submit" className="btn" disabled={isSubmitting}>

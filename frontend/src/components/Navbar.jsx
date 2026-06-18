@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useLanguage } from "../LanguageContext";
 
 const Navbar = () => {
@@ -7,9 +7,11 @@ const Navbar = () => {
   const { t, language, changeLanguage } = useLanguage();
   const [showAuthMenu, setShowAuthMenu] = useState(false);
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [showEmergencyMenu, setShowEmergencyMenu] = useState(false);
   const authMenuRef = useRef(null);
   const languageMenuRef = useRef(null);
-  
+  const emergencyMenuRef = useRef(null);
+
   // Safe check if user is in localStorage
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
@@ -20,6 +22,9 @@ const Navbar = () => {
       }
       if (languageMenuRef.current && !languageMenuRef.current.contains(event.target)) {
         setShowLanguageMenu(false);
+      }
+      if (emergencyMenuRef.current && !emergencyMenuRef.current.contains(event.target)) {
+        setShowEmergencyMenu(false);
       }
     };
 
@@ -45,31 +50,74 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <div className="container nav-container">
-        <Link to="/" className="nav-brand">
-          CivicConnect
+      <div className="nav-container" style={{ padding: '0 60px' }}>
+        <Link to="/" className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img src="/logo.png" alt="CivicConnect Logo" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+          <span style={{ fontFamily: 'cursive', fontWeight: 'bold', fontSize: '26px' }}>CivicConnect</span>
         </Link>
         <div className="nav-links nav-links-center">
-          <Link to="/" className="nav-link">{t("nav_home")}</Link>
-          <Link to="/track-complaint" className="nav-link">{t("nav_track_complaint")}</Link>
-          <Link to="/about-us" className="nav-link">{t("nav_about_us")}</Link>
-          <Link to="/designated-officer" className="nav-link">{t("nav_designated_officer")}</Link>
-          <Link to="/site-map" className="nav-link">{t("nav_sitemap")}</Link>
+          <NavLink to="/" end className="nav-link">{t("nav_home")}</NavLink>
+          <NavLink to="/track-complaint" className="nav-link">{t("nav_track_complaint")}</NavLink>
+          <NavLink to="/contact-us" className="nav-link">{t("nav_contact_us")}</NavLink>
+          <NavLink to="/designated-officer" className="nav-link">{t("nav_designated_officer")}</NavLink>
+          <NavLink to="/site-map" className="nav-link">{t("nav_sitemap")}</NavLink>
+          <div className="nav-auth-menu" ref={emergencyMenuRef} style={{ marginLeft: "10px" }}>
+            <button
+              type="button"
+              className="nav-link"
+              style={{ color: "#e74c3c", fontWeight: "bold", background: "none", border: "none", cursor: "pointer", fontSize: "14px", padding: 0 }}
+              onClick={() => setShowEmergencyMenu((value) => !value)}
+            >
+              Emergency Contacts ▼
+            </button>
+            {showEmergencyMenu && (
+              <div className="nav-dropdown" style={{ left: "0", right: "auto", minWidth: "220px" }}>
+                <a href="tel:112" className="nav-dropdown-link" style={{ color: "#e74c3c" }}>National Emergency: 112</a>
+                <a href="tel:100" className="nav-dropdown-link">Police: 100</a>
+                <a href="tel:101" className="nav-dropdown-link">Fire: 101</a>
+                <a href="tel:102" className="nav-dropdown-link">Ambulance: 102</a>
+                <a href="tel:108" className="nav-dropdown-link">Disaster Management: 108</a>
+                <a href="tel:1091" className="nav-dropdown-link">Women Helpline: 1091</a>
+                <a href="tel:1098" className="nav-dropdown-link">Child Helpline: 1098</a>
+                <a href="tel:14567" className="nav-dropdown-link">Senior Citizen: 14567</a>
+                <a href="tel:1930" className="nav-dropdown-link">Cyber Crime: 1930</a>
+                <a href="tel:1073" className="nav-dropdown-link">Road Accident: 1073</a>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="nav-links nav-links-right">
           {user ? (
-            <>
-              <Link to="/dashboard" className="nav-link">{t("nav_dashboard")}</Link>
-              <span className="nav-link" style={{ fontWeight: 'bold' }}>{t("nav_welcome")}, {user.name}</span>
-              <button 
-                onClick={handleLogout} 
-                className="btn" 
-                style={{ padding: "5px 10px", marginTop: "0", display: "inline-block", width: "auto" }}
+            <div className="nav-auth-menu" ref={authMenuRef} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="nav-link" style={{ fontWeight: 'bold' }}>{user.name}</span>
+              <button
+                type="button"
+                className="nav-icon-button"
+                onClick={() => setShowAuthMenu((value) => !value)}
+                aria-label="Open profile options"
+                aria-expanded={showAuthMenu}
+                style={{ backgroundColor: "#3498db", border: "none" }}
               >
-                {t("nav_logout")}
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="white">
+                  <path d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z" />
+                </svg>
               </button>
-            </>
+              {showAuthMenu && (
+                <div className="nav-dropdown" style={{ right: 0, left: 'auto', minWidth: '180px' }}>
+                  <div className="nav-dropdown-link" style={{ cursor: 'default', color: '#7f8c8d', borderBottom: '1px solid #ecf0f1', paddingBottom: '10px', marginBottom: '5px', fontSize: '12px' }}>
+                    {user.email}
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="nav-dropdown-link"
+                    style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c', fontWeight: 'bold' }}
+                  >
+                    {t("nav_logout")}
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="nav-auth-menu" ref={authMenuRef}>
               <button
@@ -98,6 +146,16 @@ const Navbar = () => {
         </div>
 
         <div className="nav-controls">
+          <button
+            type="button"
+            className="nav-icon-button"
+            aria-label="Notifications"
+            onClick={() => alert("No new notifications")}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z" />
+            </svg>
+          </button>
           <div className="nav-language-menu" ref={languageMenuRef}>
             <button
               type="button"

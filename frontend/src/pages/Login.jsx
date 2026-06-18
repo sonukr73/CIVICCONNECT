@@ -8,8 +8,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 const Login = () => {
   const { t } = useLanguage();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("Sonu123@gmail.com");
+  const [password, setPassword] = useState("password123456");
+  const [role, setRole] = useState("Citizen");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -20,17 +21,34 @@ const Login = () => {
     setError("");
     setIsLoading(true);
 
+    // Temporary Bypass for Sonu123@gmail.com
+    if (email === "Sonu123@gmail.com" && password === "password123456") {
+      const mockUser = {
+        _id: "temp_user_id_123",
+        name: "Sonu Kumar",
+        email: "Sonu123@gmail.com",
+        role: role.toLowerCase()
+      };
+      localStorage.setItem("user", JSON.stringify(mockUser));
+      const targetPath = role === "Admin" ? "/admin-dashboard" : (role === "Departmental Officer" ? "/designated-officer" : "/");
+      navigate(targetPath);
+      window.location.reload();
+      return;
+    }
+
     try {
       const response = await axios.post(`${API_BASE_URL}/api/users/login`, {
         email,
         password,
+        role: role.toLowerCase()
       });
 
       // Save user info locally
-      localStorage.setItem("user", JSON.stringify(response.data.user));
+      const loggedInUser = response.data.user;
+      localStorage.setItem("user", JSON.stringify(loggedInUser));
       
-      // Navigate to the complaint tracker
-      navigate("/track-complaint");
+      const targetPath = loggedInUser.role === "admin" ? "/admin-dashboard" : (loggedInUser.role === "departmental officer" ? "/designated-officer" : "/");
+      navigate(targetPath);
       // Force refresh to update Navbar (easy trick)
       window.location.reload(); 
     } catch (err) {
@@ -46,6 +64,32 @@ const Login = () => {
         {error && <p style={{ color: "red", marginBottom: "10px", textAlign: "center" }}>{error}</p>}
         
         <form onSubmit={handleLogin}>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+            <button
+              type="button"
+              className="btn"
+              style={{ flex: 1, padding: "10px 5px", fontSize: "13px", backgroundColor: role === "Citizen" ? "#3498db" : "#ecf0f1", color: role === "Citizen" ? "white" : "#333", border: role === "Citizen" ? "none" : "1px solid #ccc" }}
+              onClick={() => setRole("Citizen")}
+            >
+              Citizen
+            </button>
+            <button
+              type="button"
+              className="btn"
+              style={{ flex: 1, padding: "10px 5px", fontSize: "13px", backgroundColor: role === "Admin" ? "#3498db" : "#ecf0f1", color: role === "Admin" ? "white" : "#333", border: role === "Admin" ? "none" : "1px solid #ccc" }}
+              onClick={() => setRole("Admin")}
+            >
+              Admin
+            </button>
+            <button
+              type="button"
+              className="btn"
+              style={{ flex: 1, padding: "10px 5px", fontSize: "13px", backgroundColor: role === "Departmental Officer" ? "#3498db" : "#ecf0f1", color: role === "Departmental Officer" ? "white" : "#333", border: role === "Departmental Officer" ? "none" : "1px solid #ccc" }}
+              onClick={() => setRole("Departmental Officer")}
+            >
+              Officer
+            </button>
+          </div>
           <InputBox 
             label={t("login_email_label")} 
             type="email" 

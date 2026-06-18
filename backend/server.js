@@ -38,6 +38,9 @@ app.use("/uploads", express.static("uploads"));
 app.use("/", indexRouter);
 
 // API routes — each module gets its own URL prefix
+const { getOfficerComplaints } = require("./src/controllers/complaintController");
+app.get("/api/officer/complaints", getOfficerComplaints);
+
 app.use("/api/users", userRoutes);           // POST /api/users/register, /login
 app.use("/api/authorities", authorityRoutes); // POST /api/authorities/register, /login
 app.use("/api/complaints", complaintRoutes); // POST, GET, PATCH /api/complaints

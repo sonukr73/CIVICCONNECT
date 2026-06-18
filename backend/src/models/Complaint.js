@@ -37,8 +37,20 @@ const complaintSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["Pending", "In Progress", "Resolved"],
-            default: "Pending", // every new complaint starts as Pending
+            enum: ["Pending", "Assigned", "In Progress", "Resolved", "Rejected"],
+            default: "Pending",
+        },
+        workLogs: [{
+            note: String,
+            createdAt: { type: Date, default: Date.now }
+        }],
+        completionNote: String,
+        rejectionReason: String,
+        resolvedAt: Date,
+        rejectedAt: Date,
+        assignedOfficer: {
+            type: String, // Allow simple string ID like 'o1', 'o2' or MongoDB ObjectIds
+            default: null
         },
         // The citizen who filed this complaint
         user: {

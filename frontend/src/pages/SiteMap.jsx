@@ -7,7 +7,7 @@ const SiteMap = () => {
   const links = [
     { to: "/", label: t("nav_home") },
     { to: "/track-complaint", label: t("nav_track_complaint") },
-    { to: "/about-us", label: t("nav_about_us") },
+    { to: "/contact-us", label: t("nav_contact_us") },
     { to: "/designated-officer", label: t("nav_designated_officer") },
     { to: "/site-map", label: t("nav_sitemap") },
     { to: "/login", label: t("nav_login") },
