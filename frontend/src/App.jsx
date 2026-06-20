@@ -9,6 +9,7 @@ import Register from "./pages/Register";
 import LanguageSelect from "./pages/LanguageSelect";
 import ContactUs from "./pages/ContactUs";
 import DesignatedOfficer from "./pages/DesignatedOfficer";
+import OfficerDashboard from "./pages/OfficerDashboard";
 import SiteMap from "./pages/SiteMap";
 import AdminDashboard from "./pages/AdminDashboard";
 import { useLanguage } from "./LanguageContext";
@@ -34,6 +35,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/contact-us" element={<ContactUs />} />
           <Route path="/designated-officer" element={<DesignatedOfficer />} />
+          <Route path="/officer-dashboard" element={<OfficerDashboard />} />
           <Route path="/site-map" element={<SiteMap />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route path="/login" element={<Login />} />

@@ -31,14 +31,31 @@ const complaintSchema = new mongoose.Schema(
             lat: { type: Number },
             lng: { type: Number },
         },
+        latitude: {
+            type: Number,
+        },
+        longitude: {
+            type: Number,
+        },
         // New: URL/path for the uploaded image
         image: {
             type: String,
+        },
+        imageUrl: {
+            type: String,
+        },
+        capturedAt: {
+            type: Date,
         },
         status: {
             type: String,
             enum: ["Pending", "Assigned", "In Progress", "Resolved", "Rejected"],
             default: "Pending",
+        },
+        priority: {
+            type: String,
+            enum: ["Low", "Medium", "High"],
+            default: "Medium"
         },
         workLogs: [{
             note: String,

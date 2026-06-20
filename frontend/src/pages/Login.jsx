@@ -8,8 +8,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 const Login = () => {
   const { t } = useLanguage();
-  const [email, setEmail] = useState("Sonu123@gmail.com");
-  const [password, setPassword] = useState("password123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState("Citizen");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -21,33 +21,24 @@ const Login = () => {
     setError("");
     setIsLoading(true);
 
-    // Temporary Bypass for Sonu123@gmail.com
-    if (email === "Sonu123@gmail.com" && password === "password123456") {
-      const mockUser = {
-        _id: "temp_user_id_123",
-        name: "Sonu Kumar",
-        email: "Sonu123@gmail.com",
-        role: role.toLowerCase()
-      };
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      const targetPath = role === "Admin" ? "/admin-dashboard" : (role === "Departmental Officer" ? "/designated-officer" : "/");
-      navigate(targetPath);
-      window.location.reload();
-      return;
-    }
-
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/users/login`, {
+      const isCitizen = role === "Citizen";
+      const endpoint = isCitizen ? "/api/users/login" : "/api/authorities/login";
+      
+      const response = await axios.post(`${API_BASE_URL}${endpoint}`, {
         email,
         password,
         role: role.toLowerCase()
       });
 
       // Save user info locally
-      const loggedInUser = response.data.user;
+      const loggedInUser = isCitizen ? response.data.user : response.data.authority;
+      if (!loggedInUser.role) {
+        loggedInUser.role = role.toLowerCase();
+      }
       localStorage.setItem("user", JSON.stringify(loggedInUser));
       
-      const targetPath = loggedInUser.role === "admin" ? "/admin-dashboard" : (loggedInUser.role === "departmental officer" ? "/designated-officer" : "/");
+      const targetPath = loggedInUser.role === "admin" ? "/admin-dashboard" : (loggedInUser.role === "departmental officer" ? "/officer-dashboard" : "/");
       navigate(targetPath);
       // Force refresh to update Navbar (easy trick)
       window.location.reload(); 
@@ -91,19 +82,25 @@ const Login = () => {
             </button>
           </div>
           <InputBox 
-            label={t("login_email_label")} 
-            type="email" 
-            placeholder={t("login_email_placeholder")} 
+            label={role === "Citizen" ? t("login_email_label") : "Login ID"} 
+            type="text" 
+            placeholder={role === "Citizen" ? t("login_email_placeholder") : "name.gov.in"} 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <InputBox 
             label={t("login_pass_label")} 
             type="password" 
-            placeholder={t("login_pass_placeholder")} 
+            placeholder={role === "Citizen" ? t("login_pass_placeholder") : "name@123"} 
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          {role !== "Citizen" && (
+            <p style={{ fontSize: "12px", color: "#64748b", margin: "-10px 0 20px 0", textAlign: "left", fontStyle: "italic" }}>
+              💡 Hint: Enter your ID (e.g. name.gov.in) and password (e.g. name@123).
+            </p>
+          )}
           
           <button type="submit" className="btn" disabled={isLoading}>
             {isLoading ? t("login_btn_loading") : t("login_btn")}

@@ -9,6 +9,7 @@ const {
     getComplaintById,
     updateComplaintStatus,
     addComplaintLog,
+    updateComplaint,
 } = require("../controllers/complaintController");
 const upload = require("../config/upload");
 
@@ -27,4 +28,8 @@ router.patch("/:id/status", updateComplaintStatus);
 // PATCH  /api/complaints/:id/log     →  Add a work log to a complaint
 router.patch("/:id/log", addComplaintLog);
 
+// PATCH  /api/complaints/:id         →  General update (e.g. assign officer, details, priority)
+router.patch("/:id", updateComplaint);
+
 module.exports = router;
+

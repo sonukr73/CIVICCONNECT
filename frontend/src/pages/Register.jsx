@@ -31,10 +31,8 @@ const Register = () => {
         password,
       });
 
-      // Automatically log them in after registration
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      navigate("/track-complaint");
-      window.location.reload();
+      // Do NOT log them in automatically. Redirect to login.
+      navigate("/login");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed.");
       setIsLoading(false);

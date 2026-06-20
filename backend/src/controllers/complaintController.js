@@ -2,6 +2,7 @@
 // Handles all CRUD operations for complaints.
 
 const Complaint = require("../models/Complaint");
+const { validateImageLocation } = require("../services/aiValidationService");
 
 // ─── Create Complaint ──────────────────────────────────────────────────────────
 // POST /api/complaints
@@ -9,7 +10,7 @@ const Complaint = require("../models/Complaint");
 // Requires: title, description, category, location, userId in request body.
 const createComplaint = async (req, res) => {
     try {
-        const { title, description, category, location, userId, lat, lng } = req.body;
+        const { title, description, category, location, userId, lat, lng, latitude, longitude, priority, capturedAt } = req.body;
 
         if (!userId) {
             return res
@@ -28,11 +29,31 @@ const createComplaint = async (req, res) => {
 
         // Process location coordinates if provided
         let locationCoordinates = undefined;
-        if (lat && lng) {
+        const finalLat = latitude ? parseFloat(latitude) : (lat ? parseFloat(lat) : undefined);
+        const finalLng = longitude ? parseFloat(longitude) : (lng ? parseFloat(lng) : undefined);
+        if (finalLat !== undefined && finalLng !== undefined) {
             locationCoordinates = {
-                lat: parseFloat(lat),
-                lng: parseFloat(lng),
+                lat: finalLat,
+                lng: finalLng,
             };
+        }
+
+        let finalCapturedAt = capturedAt ? new Date(capturedAt) : undefined;
+        if (imageUrl && !finalCapturedAt) {
+            finalCapturedAt = new Date();
+        }
+
+        // Call AI Validation service if we have coordinates and image path
+        let aiValidationResult = null;
+        if (imageUrl && finalLat !== undefined && finalLng !== undefined) {
+            const imagePath = req.file ? req.file.path : imageUrl;
+            aiValidationResult = await validateImageLocation(imagePath, finalLat, finalLng);
+            console.log("[AI Geotag Validation Result]", aiValidationResult);
+        }
+
+        let initialAdminNotes = "";
+        if (aiValidationResult) {
+            initialAdminNotes = `[AI Geotag Verification: ${aiValidationResult.matchesLocation ? 'PASSED' : 'FAILED'} (Confidence: ${(aiValidationResult.confidence * 100).toFixed(0)}%) - ${aiValidationResult.message}]`;
         }
 
         const complaint = await Complaint.create({
@@ -41,8 +62,14 @@ const createComplaint = async (req, res) => {
             category,
             location,
             locationCoordinates,
+            latitude: finalLat,
+            longitude: finalLng,
             image: imageUrl,
+            imageUrl: imageUrl,
+            capturedAt: finalCapturedAt,
             user: userId, // the citizen who is filing this complaint
+            priority: priority || "Medium",
+            adminNotes: initialAdminNotes
         });
 
         res.status(201).json({
@@ -231,6 +258,24 @@ const getOfficerComplaints = async (req, res) => {
     }
 };
 
+// ─── Update Complaint (General) ───────────────────────────────────────────────
+// PATCH /api/complaints/:id
+const updateComplaint = async (req, res) => {
+    try {
+        const complaint = await Complaint.findByIdAndUpdate(
+            req.params.id,
+            { $set: req.body },
+            { new: true, runValidators: true }
+        );
+        if (!complaint) {
+            return res.status(404).json({ success: false, message: "Complaint not found" });
+        }
+        res.status(200).json({ success: true, message: "Complaint updated successfully", complaint });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     createComplaint,
     getAllComplaints,
@@ -238,4 +283,6 @@ module.exports = {
     updateComplaintStatus,
     addComplaintLog,
     getOfficerComplaints,
+    updateComplaint,
 };
+

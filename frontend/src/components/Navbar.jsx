@@ -55,13 +55,13 @@ const Navbar = () => {
           <img src="/logo.png" alt="CivicConnect Logo" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
           <span style={{ fontFamily: 'cursive', fontWeight: 'bold', fontSize: '26px' }}>CivicConnect</span>
         </Link>
-        <div className="nav-links nav-links-center">
+        <div className="nav-links nav-links-center" style={{ gap: "18px" }}>
           <NavLink to="/" end className="nav-link">{t("nav_home")}</NavLink>
           <NavLink to="/track-complaint" className="nav-link">{t("nav_track_complaint")}</NavLink>
           <NavLink to="/contact-us" className="nav-link">{t("nav_contact_us")}</NavLink>
           <NavLink to="/designated-officer" className="nav-link">{t("nav_designated_officer")}</NavLink>
           <NavLink to="/site-map" className="nav-link">{t("nav_sitemap")}</NavLink>
-          <div className="nav-auth-menu" ref={emergencyMenuRef} style={{ marginLeft: "10px" }}>
+          <div className="nav-auth-menu" ref={emergencyMenuRef}>
             <button
               type="button"
               className="nav-link"
@@ -71,20 +71,194 @@ const Navbar = () => {
               Emergency Contacts ▼
             </button>
             {showEmergencyMenu && (
-              <div className="nav-dropdown" style={{ left: "0", right: "auto", minWidth: "220px" }}>
-                <a href="tel:112" className="nav-dropdown-link" style={{ color: "#e74c3c" }}>National Emergency: 112</a>
-                <a href="tel:100" className="nav-dropdown-link">Police: 100</a>
-                <a href="tel:101" className="nav-dropdown-link">Fire: 101</a>
-                <a href="tel:102" className="nav-dropdown-link">Ambulance: 102</a>
-                <a href="tel:108" className="nav-dropdown-link">Disaster Management: 108</a>
-                <a href="tel:1091" className="nav-dropdown-link">Women Helpline: 1091</a>
-                <a href="tel:1098" className="nav-dropdown-link">Child Helpline: 1098</a>
-                <a href="tel:14567" className="nav-dropdown-link">Senior Citizen: 14567</a>
-                <a href="tel:1930" className="nav-dropdown-link">Cyber Crime: 1930</a>
-                <a href="tel:1073" className="nav-dropdown-link">Road Accident: 1073</a>
+              <div 
+                className="nav-dropdown" 
+                style={{ 
+                  left: "0", 
+                  right: "auto", 
+                  width: "380px", 
+                  padding: 0, 
+                  borderRadius: "12px", 
+                  overflow: "hidden", 
+                  boxShadow: "0 15px 45px rgba(0,0,0,0.15)",
+                  border: "1px solid #e2e8f0",
+                  zIndex: 2000,
+                  background: "#f8fafc"
+                }}
+              >
+                {/* Header Banner */}
+                <div style={{ background: "#dc3545", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "white" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.11-.27 11.36 11.36 0 0 0 3.58.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.58 1 1 0 0 1-.27 1.11Z"/>
+                    </svg>
+                    <span style={{ fontWeight: "800", fontSize: "15px" }}>Emergency Helpline Contacts</span>
+                  </div>
+                  <button 
+                    onClick={() => setShowEmergencyMenu(false)}
+                    style={{ background: "none", border: "none", color: "white", fontSize: "16px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Dropdown Body */}
+                <div style={{ padding: "12px", maxHeight: "420px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {[
+                    {
+                      title: "National Emergency Number",
+                      category: "PRIMARY",
+                      tel: "112",
+                      icon: (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ color: "#dc3545" }}>
+                          <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.11-.27 11.36 11.36 0 0 0 3.58.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.58 1 1 0 0 1-.27 1.11Z"/>
+                        </svg>
+                      )
+                    },
+                    {
+                      title: "Police Emergency",
+                      category: "POLICE",
+                      tel: "112",
+                      icon: (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ color: "#dc3545" }}>
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+                        </svg>
+                      )
+                    },
+                    {
+                      title: "Ambulance",
+                      category: "MEDICAL",
+                      tel: "108",
+                      icon: (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#dc3545" }}>
+                          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                        </svg>
+                      )
+                    },
+                    {
+                      title: "Fire Brigade",
+                      category: "FIRE",
+                      tel: "101",
+                      icon: (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ color: "#dc3545" }}>
+                          <path d="M12 2c-.41 0-.8.17-1.08.48C9.37 4.25 8 6.96 8 9.5c0 2.2 1.8 4 4 4s4-1.8 4-4c0-2.54-1.37-5.25-2.92-7.02C12.8 2.17 12.41 2 12 2Z"/>
+                        </svg>
+                      )
+                    },
+                    {
+                      title: "Women Helpline",
+                      category: "WOMEN",
+                      tel: "1091",
+                      icon: (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#dc3545" }}>
+                          <circle cx="12" cy="9" r="5"></circle>
+                          <line x1="12" y1="14" x2="12" y2="22"></line>
+                          <line x1="9" y1="18" x2="15" y2="18"></line>
+                        </svg>
+                      )
+                    },
+                    {
+                      title: "Child Helpline",
+                      category: "CHILD",
+                      tel: "1098",
+                      icon: (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#dc3545" }}>
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                          <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                          <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                      )
+                    },
+                    {
+                      title: "Disaster Management",
+                      category: "DISASTER",
+                      tel: "1078",
+                      icon: (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#dc3545" }}>
+                          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                          <line x1="12" y1="9" x2="12" y2="13"></line>
+                          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                      )
+                    }
+                  ].map((contact, i) => (
+                    <div 
+                      key={i}
+                      style={{
+                        background: "white",
+                        borderRadius: "8px",
+                        border: "1px solid #e2e8f0",
+                        padding: "12px 14px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        boxShadow: "0 2px 5px rgba(0,0,0,0.02)",
+                        gap: "10px"
+                      }}
+                    >
+                      {/* Left: Icon */}
+                      <div style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        background: "#fff5f5",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                      }}>
+                        {contact.icon}
+                      </div>
+
+                      {/* Middle: Details */}
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <div style={{ fontSize: "13.5px", fontWeight: "800", color: "#1e293b" }}>{contact.title}</div>
+                        <div style={{ fontSize: "9.5px", fontWeight: "800", color: "#888", letterSpacing: "0.5px" }}>{contact.category}</div>
+                      </div>
+
+                      {/* Right: Call Action */}
+                      <a 
+                        href={`tel:${contact.tel}`}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          padding: "6px 14px",
+                          border: "1.5px solid #dc3545",
+                          borderRadius: "20px",
+                          color: "#dc3545",
+                          background: "white",
+                          fontWeight: "800",
+                          fontSize: "12px",
+                          textDecoration: "none",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "#fff5f5"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "white"; }}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: "3px" }}>
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                          <polyline points="15 3 21 3 21 9"></polyline>
+                          <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                        {contact.tel}
+                      </a>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
+          {user && user.role?.toLowerCase() === "citizen" && (
+            <NavLink to="/dashboard" className="nav-link">Dashboard</NavLink>
+          )}
+          {user && user.role?.toLowerCase() === "admin" && (
+            <NavLink to="/admin-dashboard" className="nav-link">Admin Dashboard</NavLink>
+          )}
+          {user && user.role?.toLowerCase() === "departmental officer" && (
+            <NavLink to="/officer-dashboard" className="nav-link">Officer Dashboard</NavLink>
+          )}
         </div>
 
         <div className="nav-links nav-links-right">

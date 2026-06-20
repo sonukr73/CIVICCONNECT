@@ -71,4 +71,25 @@ const login = async (req, res) => {
     }
 };
 
-module.exports = { register, login };
+// GET /api/authorities
+const getAuthorities = async (req, res) => {
+    try {
+        const authorities = await Authority.find({}, "-password");
+        res.status(200).json({ success: true, authorities });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// DELETE /api/authorities/:id
+const deleteAuthority = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Authority.findByIdAndDelete(id);
+        res.status(200).json({ success: true, message: "Authority deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+module.exports = { register, login, getAuthorities, deleteAuthority };

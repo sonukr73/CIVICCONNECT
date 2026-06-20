@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import StatusBadge from "../components/StatusBadge";
-import WorkLogSection from "../components/WorkLogSection";
-import StatusUpdateModal from "../components/StatusUpdateModal";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-// Predefined officers
+// Predefined officers fallback
 const MOCK_OFFICERS = [
   { id: "o1", name: "Rajesh Sharma", department: "Roads" },
   { id: "o2", name: "Priya Mehta", department: "Water Supply" },
@@ -16,424 +13,170 @@ const MOCK_OFFICERS = [
 ];
 
 export default function DesignatedOfficer() {
-  const [selectedOfficerId, setSelectedOfficerId] = useState(MOCK_OFFICERS[0].id);
-  const [complaints, setComplaints] = useState([]);
-  const [activeComplaint, setActiveComplaint] = useState(null);
-  const [modalType, setModalType] = useState(null); // 'status' or 'details'
-  const [toast, setToast] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [officers, setOfficers] = useState(MOCK_OFFICERS);
+  const [publicFilterDept, setPublicFilterDept] = useState("All");
 
-  // Get active user from local storage
-  const user = JSON.parse(localStorage.getItem("user") || "null");
-
-  // Fetch complaints from API or local fallback
-  const fetchComplaints = async () => {
-    setLoading(true);
+  const fetchOfficers = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/officer/complaints`, {
-        params: { officerId: selectedOfficerId }
-      });
+      const res = await axios.get(`${API_BASE_URL}/api/authorities`);
       if (res.data && res.data.success) {
-        setComplaints(res.data.complaints);
+        const list = res.data.authorities.filter(auth => auth.department !== "Admin");
+        setOfficers(list);
       }
     } catch (err) {
-      console.warn("Backend API not reachable. Falling back to local storage.", err);
-      // Fallback
-      const saved = localStorage.getItem("complaints");
-      if (saved) {
-        setComplaints(JSON.parse(saved));
-      }
-    } finally {
-      setLoading(false);
+      console.warn("Could not fetch officers.", err);
     }
   };
 
   useEffect(() => {
-    fetchComplaints();
-  }, [selectedOfficerId]);
+    fetchOfficers();
+  }, []);
 
-  const showToast = (message) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 3000);
-  };
-
-  const handleStatusUpdateSave = async ({ complaintId, status, workNote, completionNote, rejectionReason }) => {
-    const activeOfficer = MOCK_OFFICERS.find(o => o.id === selectedOfficerId);
-    const updatedData = {
-      status,
-      officerId: selectedOfficerId,
-      completionNote,
-      rejectionReason
-    };
-
-    // 1. Try backend API call first
-    let apiSuccess = false;
-    try {
-      const res = await axios.patch(`${API_BASE_URL}/api/complaints/${complaintId}/status`, updatedData);
-      if (res.data && res.data.success) {
-        apiSuccess = true;
-      }
-    } catch (err) {
-      console.warn("Could not patch status to backend. Syncing locally.", err);
-    }
-
-    // 2. Add work log if any notes were added
-    if (workNote) {
-      try {
-        await axios.patch(`${API_BASE_URL}/api/complaints/${complaintId}/log`, {
-          note: workNote,
-          officerId: selectedOfficerId
-        });
-      } catch (err) {
-        console.warn("Could not post log to backend.", err);
-      }
-    }
-
-    // 3. Fallback / Local state update to ensure UI is 100% functional
-    const updatedComplaints = complaints.map(c => {
-      const isTarget = (c.id === complaintId || c._id === complaintId);
-      if (isTarget) {
-        const logs = c.workLogs || [];
-        if (workNote) {
-          logs.push({ note: workNote, createdAt: new Date().toISOString() });
-        }
-        
-        return {
-          ...c,
-          status,
-          workLogs: logs,
-          completionNote: status === "Resolved" ? completionNote : c.completionNote,
-          rejectionReason: status === "Rejected" ? rejectionReason : c.rejectionReason,
-          resolvedAt: status === "Resolved" ? new Date().toISOString() : c.resolvedAt,
-          rejectedAt: status === "Rejected" ? new Date().toISOString() : c.rejectedAt,
-          resolvedBy: status === "Resolved" ? activeOfficer.name : c.resolvedBy,
-          rejectedBy: status === "Rejected" ? activeOfficer.name : c.rejectedBy,
-        };
-      }
-      return c;
-    });
-
-    setComplaints(updatedComplaints);
-    localStorage.setItem("complaints", JSON.stringify(updatedComplaints));
-    setModalType(null);
-
-    // Toast notification mapping
-    if (status === "Resolved") {
-      showToast("✓ Complaint Resolved");
-    } else if (status === "Rejected") {
-      showToast("✓ Complaint Rejected");
-    } else {
-      showToast("✓ Status Updated Successfully");
-    }
-  };
-
-  const selectedOfficer = MOCK_OFFICERS.find(o => o.id === selectedOfficerId);
-
-  // Filter complaints assigned to this officer
-  const assignedComplaints = complaints.filter(c => c.assignedOfficer === selectedOfficerId);
-
-  // Stats calculation (5 Cards)
-  const stats = {
-    pending: assignedComplaints.filter(c => c.status === "Pending").length,
-    assigned: assignedComplaints.filter(c => c.status === "Assigned").length,
-    inProgress: assignedComplaints.filter(c => c.status === "In Progress").length,
-    resolved: assignedComplaints.filter(c => c.status === "Resolved").length,
-    rejected: assignedComplaints.filter(c => c.status === "Rejected").length,
-  };
-
-  if (!user || user.role !== "departmental officer") {
-    return (
-      <div style={{ minHeight: "80vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px" }}>
-        <div style={{ background: "white", padding: "40px", borderRadius: "16px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", maxWidth: "500px", textAlign: "center" }}>
-          <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "#fdecea", display: "flex", alignItems: "center", justifyContent: "center", color: "#e74c3c", margin: "0 auto 20px" }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-          </div>
-          <h2 style={{ fontSize: "22px", fontWeight: "800", color: "#1a1a2e", marginBottom: "12px" }}>Access Restricted</h2>
-          <p style={{ color: "#64748b", fontSize: "14px", lineHeight: 1.6, marginBottom: "24px" }}>
-            Please log in as an <strong>Officer</strong> to access the task dashboard.
-          </p>
-          <a href="/login" style={{ display: "inline-block", background: "linear-gradient(135deg, #3498db, #2980b9)", color: "white", textDecoration: "none", padding: "12px 24px", borderRadius: "8px", fontWeight: "700", fontSize: "14px", boxShadow: "0 4px 12px rgba(52, 152, 219, 0.25)" }}>
-            Go to Login Page
-          </a>
-        </div>
-      </div>
-    );
-  }
+  const departments = ["All", "Roads", "Water Supply", "Electricity", "Sanitation", "Other"];
+  const filteredOfficers = officers.filter(
+    o => publicFilterDept === "All" || o.department === publicFilterDept
+  );
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "30px 40px", fontFamily: "'Segoe UI', sans-serif" }}>
-      {/* Toast Notification */}
-      {toast && (
-        <div style={{ position: "fixed", top: "80px", right: "40px", background: "#27ae60", color: "white", padding: "12px 24px", borderRadius: "8px", fontWeight: "700", fontSize: "14px", boxShadow: "0 10px 30px rgba(39, 174, 96, 0.25)", zIndex: 2000, display: "flex", alignItems: "center", gap: "8px", transition: "all 0.3s ease" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          {toast}
-        </div>
-      )}
+    <div style={{ minHeight: "100vh", background: "#f8fafc", padding: "40px 60px", fontFamily: "'Segoe UI', sans-serif" }}>
+      {/* Directory Header */}
+      <div style={{ textAlign: "center", marginBottom: "48px" }}>
+        <h1 style={{ fontSize: "32px", fontWeight: "900", color: "#1a1a2e", margin: 0, letterSpacing: "-0.5px" }}>
+          Designated Departmental Officers
+        </h1>
+        <p style={{ color: "#64748b", marginTop: "10px", fontSize: "16px", fontWeight: "500", maxWidth: "600px", margin: "10px auto 0" }}>
+          Meet the municipal officers responsible for resolving grievances in your sector/locality. Select a department to view the designated field officer.
+        </p>
+      </div>
 
-      {/* Header & Testing Mode officer switcher */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px", flexWrap: "wrap", gap: "20px" }}>
-        <div>
-          <h1 style={{ fontSize: "28px", fontWeight: "900", color: "#1a1a2e", margin: 0, letterSpacing: "-0.5px" }}>Officer Workspace</h1>
-          <p style={{ color: "#64748b", marginTop: "6px", fontSize: "14px", fontWeight: "500" }}>Manage your assigned field complaints, update statuses and file progress reports</p>
-        </div>
+      {/* Department Filter Pills */}
+      <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap", marginBottom: "40px" }}>
+        {departments.map(dept => (
+          <button
+            key={dept}
+            onClick={() => setPublicFilterDept(dept)}
+            style={{
+              padding: "10px 24px",
+              borderRadius: "30px",
+              border: "none",
+              fontWeight: "750",
+              fontSize: "14px",
+              cursor: "pointer",
+              transition: "all 0.25s ease",
+              background: publicFilterDept === dept ? "#3498db" : "white",
+              color: publicFilterDept === dept ? "white" : "#64748b",
+              boxShadow: publicFilterDept === dept ? "0 4px 12px rgba(52, 152, 219, 0.25)" : "0 4px 10px rgba(0,0,0,0.03)",
+              border: "1px solid " + (publicFilterDept === dept ? "#3498db" : "#e2e8f0")
+            }}
+          >
+            {dept}
+          </button>
+        ))}
+      </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-            <span style={{ fontSize: "11px", fontWeight: "700", color: "#888", textTransform: "uppercase", letterSpacing: "0.5px" }}>Testing Mode: Choose Officer</span>
-            <select 
-              value={selectedOfficerId} 
-              onChange={(e) => setSelectedOfficerId(e.target.value)}
-              style={{ padding: "8px 12px", border: "1.5px solid #e0e0e0", borderRadius: "8px", fontSize: "14px", fontWeight: "700", color: "#333", background: "white", cursor: "pointer", marginTop: "4px" }}
+      {/* Officers Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+        {filteredOfficers.map(o => {
+          let badgeBg = "#e8f4fd";
+          let badgeColor = "#3498db";
+          if (o.department === "Water Supply") {
+            badgeBg = "#e8fdf4";
+            badgeColor = "#2ecc71";
+          } else if (o.department === "Electricity") {
+            badgeBg = "#fffde8";
+            badgeColor = "#f1c40f";
+          } else if (o.department === "Sanitation") {
+            badgeBg = "#fbe8fd";
+            badgeColor = "#9b59b6";
+          } else if (o.department === "Other") {
+            badgeBg = "#f0f2f5";
+            badgeColor = "#95a5a6";
+          }
+
+          const email = o.email || `${o.name.toLowerCase().replace(/\s+/g, ".")}@civicconnect.gov.in`;
+          const phone = o.phone || `+91 98765 000${o._id || o.id}`;
+
+          return (
+            <div
+              key={o._id || o.id}
+              style={{
+                background: "white",
+                borderRadius: "16px",
+                padding: "28px 24px",
+                boxShadow: "0 6px 18px rgba(0,0,0,0.03)",
+                border: "1.5px solid #eef2f6",
+                textAlign: "center",
+                transition: "all 0.3s ease",
+                cursor: "pointer"
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = "translateY(-6px)";
+                e.currentTarget.style.boxShadow = "0 12px 30px rgba(0,0,0,0.08)";
+                e.currentTarget.style.borderColor = "#3498db44";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 6px 18px rgba(0,0,0,0.03)";
+                e.currentTarget.style.borderColor = "#eef2f6";
+              }}
             >
-              {MOCK_OFFICERS.map(o => (
-                <option key={o.id} value={o.id}>{o.name} ({o.department})</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Officer Card */}
-      <div style={{ background: "white", borderRadius: "16px", padding: "24px", marginBottom: "32px", boxShadow: "0 4px 20px rgba(0,0,0,0.04)", border: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
-        <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "linear-gradient(135deg, #3498db, #9b59b6)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "800", fontSize: "24px" }}>
-          {selectedOfficer.name[0]}
-        </div>
-        <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#1a1a2e", margin: 0 }}>{selectedOfficer.name}</h2>
-          <p style={{ color: "#64748b", marginTop: "4px", fontSize: "13px", fontWeight: "600" }}>
-            Department: <span style={{ color: "#3498db" }}>{selectedOfficer.department}</span> | Role: Field Officer
-          </p>
-        </div>
-        <div style={{ background: "#e8f4fd", padding: "8px 16px", borderRadius: "30px", fontSize: "12px", fontWeight: "700", color: "#3498db" }}>
-          {assignedComplaints.length} Assignments
-        </div>
-      </div>
-
-      {/* Statistics section: 5 cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "20px", marginBottom: "32px" }}>
-        {/* Pending/New */}
-        <div style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#fef3e2", display: "flex", alignItems: "center", justifyContent: "center", color: "#e67e22" }}>
-            <span style={{ fontSize: "18px" }}>⏳</span>
-          </div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#1a1a2e" }}>{stats.pending}</div>
-            <div style={{ fontSize: "12px", color: "#888", fontWeight: "600" }}>Pending/New</div>
-          </div>
-        </div>
-
-        {/* Assigned */}
-        <div style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#e8f4fd", display: "flex", alignItems: "center", justifyContent: "center", color: "#3498db" }}>
-            <span style={{ fontSize: "18px" }}>📌</span>
-          </div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#1a1a2e" }}>{stats.assigned}</div>
-            <div style={{ fontSize: "12px", color: "#888", fontWeight: "600" }}>Assigned</div>
-          </div>
-        </div>
-
-        {/* In Progress */}
-        <div style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#f5eef8", display: "flex", alignItems: "center", justifyContent: "center", color: "#9b59b6" }}>
-            <span style={{ fontSize: "18px" }}>⚙️</span>
-          </div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#1a1a2e" }}>{stats.inProgress}</div>
-            <div style={{ fontSize: "12px", color: "#888", fontWeight: "600" }}>In Progress</div>
-          </div>
-        </div>
-
-        {/* Resolved */}
-        <div style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#e9f7ef", display: "flex", alignItems: "center", justifyContent: "center", color: "#27ae60" }}>
-            <span style={{ fontSize: "18px" }}>✓</span>
-          </div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#1a1a2e" }}>{stats.resolved}</div>
-            <div style={{ fontSize: "12px", color: "#888", fontWeight: "600" }}>Resolved</div>
-          </div>
-        </div>
-
-        {/* Rejected */}
-        <div style={{ background: "white", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #f0f0f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#fdecea", display: "flex", alignItems: "center", justifyContent: "center", color: "#e74c3c" }}>
-            <span style={{ fontSize: "18px" }}>✕</span>
-          </div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#1a1a2e" }}>{stats.rejected}</div>
-            <div style={{ fontSize: "12px", color: "#888", fontWeight: "600" }}>Rejected</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Assigned Tasks list */}
-      <div style={{ background: "white", borderRadius: "14px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)", overflow: "hidden", border: "1px solid #f0f0f0" }}>
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0f0f0" }}>
-          <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "800", color: "#1a1a2e" }}>Assigned Tasks ({assignedComplaints.length})</h3>
-        </div>
-
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#fafbfc" }}>
-                {["ID", "Complaint Title", "Citizen", "Location", "Reported Date", "Status", "Actions"].map(h => (
-                  <th key={h} style={{ padding: "14px 16px", textAlign: "left", fontSize: "11px", fontWeight: "800", color: "#888", textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: "#888" }}>Loading assignments...</td></tr>
-              ) : assignedComplaints.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ padding: "60px 40px", textAlign: "center", color: "#aaa" }}>
-                    <div style={{ fontSize: "36px", marginBottom: "10px" }}>🏖</div>
-                    <div style={{ fontSize: "15px", fontWeight: "700" }}>No complaints assigned.</div>
-                    <div style={{ fontSize: "13px", color: "#888", marginTop: "4px" }}>Enjoy your day, or wait for admin assignments!</div>
-                  </td>
-                </tr>
-              ) : (
-                assignedComplaints.map((c, i) => (
-                  <tr key={c.id || c._id} style={{ borderTop: "1px solid #f5f5f5", background: i % 2 === 0 ? "white" : "#fafafa", verticalAlign: "middle" }}>
-                    <td style={{ padding: "16px", fontWeight: "700", color: "#3498db", fontSize: "13px" }}>{c.id || c._id}</td>
-                    <td style={{ padding: "16px", maxWidth: "250px" }}>
-                      <div style={{ fontWeight: "700", color: "#1a1a2e", fontSize: "14px" }}>{c.title}</div>
-                      <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.description}</div>
-                    </td>
-                    <td style={{ padding: "16px", fontSize: "13px", color: "#1a1a2e", fontWeight: "600" }}>{c.citizenName || c.user?.name || "Citizen"}</td>
-                    <td style={{ padding: "16px", fontSize: "13px", color: "#555", maxWidth: "150px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.location}</td>
-                    <td style={{ padding: "16px", fontSize: "13px", color: "#888" }}>{c.date || new Date(c.createdAt).toLocaleDateString()}</td>
-                    <td style={{ padding: "16px" }}><StatusBadge status={c.status} /></td>
-                    <td style={{ padding: "16px" }}>
-                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        <button
-                          onClick={() => { setActiveComplaint(c); setModalType("details"); }}
-                          style={{ padding: "6px 12px", background: "#f0f2f5", color: "#4a5568", border: "none", borderRadius: "6px", fontWeight: "700", fontSize: "12px", cursor: "pointer" }}
-                        >
-                          View Details
-                        </button>
-                        {c.status !== "Resolved" && c.status !== "Rejected" ? (
-                          <button
-                            onClick={() => { setActiveComplaint(c); setModalType("status"); }}
-                            style={{ padding: "6px 12px", background: "linear-gradient(135deg, #3498db, #2980b9)", color: "white", border: "none", borderRadius: "6px", fontWeight: "700", fontSize: "12px", cursor: "pointer" }}
-                          >
-                            Update Status
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: "12px", color: c.status === "Resolved" ? "#27ae60" : "#e74c3c", fontWeight: "800", display: "flex", alignItems: "center", gap: "4px" }}>
-                            {c.status === "Resolved" ? "✓ Work Completed" : "✕ Complaint Rejected"}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Details View Modal */}
-      {modalType === "details" && activeComplaint && (
-        <div style={{
-          position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.55)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 1100, padding: "20px"
-        }}>
-          <div style={{
-            background: "white", borderRadius: "16px", width: "100%", maxWidth: "600px",
-            boxShadow: "0 25px 60px rgba(0,0,0,0.25)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto"
-          }}>
-            {/* Header */}
-            <div style={{ background: "linear-gradient(135deg, #2c3e50, #3498db)", padding: "20px 24px", color: "white" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700" }}>Complaint Details</h3>
-                  <p style={{ fontSize: "11px", opacity: 0.75, margin: "2px 0 0 0" }}>ID: {activeComplaint.id || activeComplaint._id}</p>
-                </div>
-                <button onClick={() => setModalType(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", cursor: "pointer", color: "white", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div style={{ padding: "24px" }}>
-              <h4 style={{ fontSize: "16px", fontWeight: "800", color: "#1a1a2e", marginBottom: "8px" }}>{activeComplaint.title}</h4>
-              <p style={{ fontSize: "13.5px", color: "#4a5568", lineHeight: 1.6, marginBottom: "16px" }}>{activeComplaint.description}</p>
-
-              {/* Grid Metadata */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "#f8fafc", padding: "14px", borderRadius: "10px", marginBottom: "20px" }}>
-                <div>
-                  <span style={{ fontSize: "10px", fontWeight: "700", color: "#888", textTransform: "uppercase" }}>Category</span>
-                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#333", marginTop: "2px" }}>{activeComplaint.category}</div>
-                </div>
-                <div>
-                  <span style={{ fontSize: "10px", fontWeight: "700", color: "#888", textTransform: "uppercase" }}>Location</span>
-                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#333", marginTop: "2px" }}>{activeComplaint.location}</div>
-                </div>
-                <div>
-                  <span style={{ fontSize: "10px", fontWeight: "700", color: "#888", textTransform: "uppercase" }}>Reporter</span>
-                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#333", marginTop: "2px" }}>{activeComplaint.citizenName || activeComplaint.user?.name || "Citizen"}</div>
-                </div>
-                <div>
-                  <span style={{ fontSize: "10px", fontWeight: "700", color: "#888", textTransform: "uppercase" }}>Reported Date</span>
-                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#333", marginTop: "2px" }}>{activeComplaint.date || new Date(activeComplaint.createdAt).toLocaleDateString()}</div>
-                </div>
+              {/* Avatar Initials with beautiful gradient */}
+              <div style={{
+                width: "72px",
+                height: "72px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #3498db, #9b59b6)",
+                color: "white",
+                fontSize: "24px",
+                fontWeight: "800",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+                boxShadow: "0 4px 10px rgba(52, 152, 219, 0.2)"
+              }}>
+                {o.name[0]}
               </div>
 
-              {/* Status Specific Info */}
-              {activeComplaint.status === "Resolved" && (
-                <div style={{ border: "1.5px solid #c6f6d5", background: "#f0fff4", padding: "14px", borderRadius: "10px", marginBottom: "20px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: "800", color: "#22543d", textTransform: "uppercase", display: "block" }}>✓ Resolution details</span>
-                  <div style={{ fontSize: "13px", color: "#2f855a", marginTop: "4px" }}>
-                    <strong>Note:</strong> {activeComplaint.completionNote}
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#48bb78", marginTop: "6px" }}>
-                    Resolved at {new Date(activeComplaint.resolvedAt).toLocaleString()} by {activeComplaint.resolvedBy || selectedOfficer.name}
-                  </div>
+              {/* Name */}
+              <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#1a1a2e", margin: "0 0 8px 0" }}>
+                {o.name}
+              </h3>
+
+              {/* Department/Sector Badge */}
+              <span style={{
+                display: "inline-block",
+                padding: "4px 14px",
+                borderRadius: "20px",
+                backgroundColor: badgeBg,
+                color: badgeColor,
+                fontSize: "12px",
+                fontWeight: "750",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                marginBottom: "20px",
+                border: `1px solid ${badgeColor}22`
+              }}>
+                {o.department}
+              </span>
+
+              <hr style={{ border: "none", borderTop: "1.5px solid #f1f5f9", margin: "0 0 16px 0" }} />
+
+              {/* Details */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", textAlign: "left", fontSize: "13px", color: "#64748b" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>✉️</span>
+                  <span style={{ fontWeight: "600", color: "#334155" }}>{email}</span>
                 </div>
-              )}
-
-              {activeComplaint.status === "Rejected" && (
-                <div style={{ border: "1.5px solid #fed7d7", background: "#fff5f5", padding: "14px", borderRadius: "10px", marginBottom: "20px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: "800", color: "#742a2a", textTransform: "uppercase", display: "block" }}>✕ Rejection Details</span>
-                  <div style={{ fontSize: "13px", color: "#9b2c2c", marginTop: "4px" }}>
-                    <strong>Reason:</strong> {activeComplaint.rejectionReason}
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#e53e3e", marginTop: "6px" }}>
-                    Rejected at {new Date(activeComplaint.rejectedAt).toLocaleString()} by {activeComplaint.rejectedBy || selectedOfficer.name}
-                  </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#2ecc71" }}></span>
+                  <span style={{ fontWeight: "700", color: "#2ecc71", fontSize: "11px", textTransform: "uppercase" }}>Active / On Duty</span>
                 </div>
-              )}
-
-              {/* Work logs timeline */}
-              <WorkLogSection logs={activeComplaint.workLogs} />
-
-              <button 
-                onClick={() => setModalType(null)}
-                style={{ width: "100%", padding: "12px", background: "#f0f2f5", color: "#4a5568", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "14px", cursor: "pointer", marginTop: "24px" }}
-              >
-                Close Details
-              </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Status Update Modal */}
-      {modalType === "status" && activeComplaint && (
-        <StatusUpdateModal 
-          complaint={activeComplaint}
-          onClose={() => setModalType(null)}
-          onSave={handleStatusUpdateSave}
-        />
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }
