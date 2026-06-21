@@ -4,15 +4,7 @@ import LeafletMap from "../components/LeafletMap";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_OFFICERS = [
-  { id: "o1", name: "Rajesh Sharma", department: "Roads" },
-  { id: "o2", name: "Priya Mehta", department: "Water Supply" },
-  { id: "o3", name: "Amit Singh", department: "Electricity" },
-  { id: "o4", name: "Sunita Rao", department: "Sanitation" },
-  { id: "o5", name: "Vikram Patel", department: "Other" },
-  { id: "o6", name: "Officer Ramesh", department: "Water Supply" },
-];
+
 
 
 const MOCK_COMPLAINTS = [
@@ -1205,8 +1197,9 @@ const AdminDashboard = () => {
                   </tr>
                 ) : (
                   paginatedItems.map((c) => {
+                    const targetId = c.id || c._id;
                     const citizenEmail = c.citizenEmail || (c.citizenName ? c.citizenName.toLowerCase().replace(/\s+/g, ".") + "@example.com" : "citizen@example.com");
-                    const ward = c.wardNumber || (c.id ? c.id.charCodeAt(c.id.length - 1) % 10 + 1 : 1);
+                    const ward = c.wardNumber || (targetId ? targetId.toString().charCodeAt(targetId.toString().length - 1) % 10 + 1 : 1);
                     const lat = c.lat || "28.6139";
                     const lng = c.lng || "77.209";
 
@@ -1234,12 +1227,12 @@ const AdminDashboard = () => {
                       statusIcon = "❌";
                     }
 
-                    const officer = MOCK_OFFICERS.find(o => o.id === c.assignedOfficer);
+                    const officer = officers.find(o => o._id === c.assignedOfficer || o.id === c.assignedOfficer);
 
                     return (
-                      <tr key={c.id} style={{ background: "#f8fafc" }}>
+                      <tr key={targetId} style={{ background: "#f8fafc" }}>
                         <td style={{ ...queueTdStyle, fontWeight: "800", color: "#1e293b", fontSize: "14px" }}>
-                          {c.id}
+                          {targetId}
                         </td>
                         <td style={queueTdStyle}>
                           <div style={{ fontWeight: "750", color: "#1e293b" }}>{c.citizenName}</div>
@@ -1320,7 +1313,7 @@ const AdminDashboard = () => {
                             </span>
                             <select
                               value={c.status}
-                              onChange={e => handleStatusChange(c.id, e.target.value)}
+                              onChange={e => handleStatusChange(targetId, e.target.value)}
                               style={{
                                 padding: "6px 10px",
                                 border: "1px solid #cbd5e1",
@@ -1343,7 +1336,7 @@ const AdminDashboard = () => {
                           <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxWidth: "180px" }}>
                             <select
                               value={c.assignedOfficer || ""}
-                              onChange={e => handleAssignOfficer(c.id, e.target.value || null)}
+                              onChange={e => handleAssignOfficer(targetId, e.target.value || null)}
                               style={{
                                 padding: "6px 10px",
                                 border: "1px solid #cbd5e1",
