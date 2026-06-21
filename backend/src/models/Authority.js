@@ -30,6 +30,11 @@ const authoritySchema = new mongoose.Schema(
             trim: true,
             // e.g. "Roads", "Water Supply", "Electricity", "Sanitation"
         },
+        role: {
+            type: String,
+            default: "departmental officer",
+            // "admin" or "departmental officer"
+        },
     },
     { timestamps: true }
 );

@@ -25,36 +25,42 @@ const seedAuthorities = async () => {
                 email: "admin.gov.in",
                 password: "Admin@123",
                 department: "Admin",
+                role: "admin",
             },
             {
                 name: "Rajesh Sharma",
                 email: "rajesh.gov.in",
                 password: "rajesh@123",
                 department: "Roads",
+                role: "departmental officer",
             },
             {
                 name: "Priya Mehta",
                 email: "priya.gov.in",
                 password: "priya@123",
                 department: "Water Supply",
+                role: "departmental officer",
             },
             {
                 name: "Amit Singh",
                 email: "amit.gov.in",
                 password: "amit@123",
                 department: "Electricity",
+                role: "departmental officer",
             },
             {
                 name: "Sunita Rao",
                 email: "sunita.gov.in",
                 password: "sunita@123",
                 department: "Sanitation",
+                role: "departmental officer",
             },
             {
                 name: "Vikram Patel",
                 email: "vikram.gov.in",
                 password: "vikram@123",
                 department: "Other",
+                role: "departmental officer",
             },
         ];
 

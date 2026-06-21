@@ -8,7 +8,7 @@ const Authority = require("../models/Authority");
 // What it does: Creates a new authority account with a department.
 const register = async (req, res) => {
     try {
-        const { name, email, password, department } = req.body;
+        const { name, email, password, department, role } = req.body;
 
         // Check if email already taken
         const existing = await Authority.findOne({ email });
@@ -18,7 +18,7 @@ const register = async (req, res) => {
                 .json({ success: false, message: "Email already registered" });
         }
 
-        const authority = await Authority.create({ name, email, password, department });
+        const authority = await Authority.create({ name, email, password, department, role: role || "departmental officer" });
 
         res.status(201).json({
             success: true,
@@ -28,6 +28,7 @@ const register = async (req, res) => {
                 name: authority.name,
                 email: authority.email,
                 department: authority.department,
+                role: authority.role,
             },
         });
     } catch (error) {
@@ -40,7 +41,7 @@ const register = async (req, res) => {
 // What it does: Verifies authority credentials.
 const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, role } = req.body;
 
         const authority = await Authority.findOne({ email });
         if (!authority) {
@@ -56,6 +57,9 @@ const login = async (req, res) => {
                 .json({ success: false, message: "Invalid email or password" });
         }
 
+        // Use stored role, or fall back to the role sent from the frontend
+        const authorityRole = authority.role || role || "departmental officer";
+
         res.status(200).json({
             success: true,
             message: "Login successful",
@@ -64,6 +68,7 @@ const login = async (req, res) => {
                 name: authority.name,
                 email: authority.email,
                 department: authority.department,
+                role: authorityRole,
             },
         });
     } catch (error) {
