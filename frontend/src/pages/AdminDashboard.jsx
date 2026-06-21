@@ -299,10 +299,20 @@ function ComplaintModal({ complaint, officers, onClose, onSave }) {
             </div>
             <div>
               <label style={labelStyle}>Assign Officer</label>
-              <select style={inputStyle} value={form.assignedOfficer || ""} onChange={e => handleChange("assignedOfficer", e.target.value || null)}>
+              <select 
+                style={inputStyle} 
+                value={form.assignedOfficer || ""} 
+                onChange={e => {
+                  const val = e.target.value || null;
+                  handleChange("assignedOfficer", val);
+                  if (form.status === "Pending" && val) {
+                    handleChange("status", "Assigned");
+                  }
+                }}
+              >
                 <option value="">— Unassigned —</option>
                 {officers.map(o => (
-                  <option key={o.id} value={o.id}>{o.name} ({o.department})</option>
+                  <option key={o._id || o.id} value={o._id || o.id}>{o.name} ({o.department})</option>
                 ))}
               </select>
             </div>

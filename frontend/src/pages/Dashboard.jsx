@@ -364,7 +364,7 @@ function GrievanceRow({ c, index, onTrackDetails }) {
 }
 
 // ─── Grievance Details Modal (matches mockup design) ───────────────────────────
-function GrievanceDetailsModal({ complaint, onClose }) {
+function GrievanceDetailsModal({ complaint, officers = [], onClose }) {
   const upvoteKey = `upvote_${complaint.id || complaint._id}`;
   
   const [upvotes, setUpvotes] = useState(() => {
@@ -511,7 +511,21 @@ function GrievanceDetailsModal({ complaint, onClose }) {
 
   const displayCategory = complaint.category === "Roads" ? "Road Damage" : (complaint.category === "Sanitation" ? "Drainage Problems" : complaint.category);
   const displayDate = complaint.date || new Date(complaint.createdAt).toLocaleDateString();
-  const displayOfficer = complaint.assignedOfficer ? "Rajesh Sharma" : "Unassigned";
+  const getOfficerName = (id) => {
+    if (!id) return "Unassigned";
+    const mockMap = {
+      o1: "Rajesh Sharma",
+      o2: "Priya Mehta",
+      o3: "Amit Singh",
+      o4: "Sunita Rao",
+      o5: "Vikram Patel",
+      o6: "Officer Ramesh"
+    };
+    if (mockMap[id]) return mockMap[id];
+    const o = officers.find(officer => officer._id === id || officer.id === id);
+    return o ? o.name : "Unassigned";
+  };
+  const displayOfficer = getOfficerName(complaint.assignedOfficer);
   const displayAssignDate = complaint.assignedDate || "6/18/2026, 9:42:31 PM";
   const displayArea = complaint.location || "Not Available";
   const displayWard = complaint.wardNumber || (complaint.id ? complaint.id.charCodeAt(complaint.id.length - 1) % 10 + 1 : 9);
@@ -693,12 +707,168 @@ function GrievanceDetailsModal({ complaint, onClose }) {
   );
 }
 
+// ─── Duplicate Complaint Modal ──────────────────────────────────────────────
+function DuplicateComplaintModal({ complaint, onClose, onUpvote }) {
+  const upvoteKey = `upvote_${complaint.id || complaint._id}`;
+  const [hasUpvoted, setHasUpvoted] = useState(() => {
+    return localStorage.getItem(`${upvoteKey}_voted`) === "true";
+  });
+  const [upvotes, setUpvotes] = useState(() => {
+    const saved = localStorage.getItem(upvoteKey);
+    return saved ? parseInt(saved) : Math.floor(Math.random() * 8) + 1;
+  });
+
+  const handleUpvote = () => {
+    if (hasUpvoted) return;
+    const newVotes = upvotes + 1;
+    setUpvotes(newVotes);
+    localStorage.setItem(upvoteKey, newVotes.toString());
+    localStorage.setItem(`${upvoteKey}_voted`, "true");
+    setHasUpvoted(true);
+    if (onUpvote) onUpvote(complaint);
+  };
+
+  const displayDate = complaint.date || (complaint.createdAt ? new Date(complaint.createdAt).toLocaleDateString() : "N/A");
+  const citizenName = complaint.citizenName || complaint.user?.name || "A Citizen";
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 1200, padding: "20px", animation: "fadeIn 0.2s ease"
+    }}>
+      <div style={{
+        background: "white", borderRadius: "16px", width: "100%", maxWidth: "520px",
+        boxShadow: "0 25px 60px rgba(0,0,0,0.3)", overflow: "hidden",
+        animation: "slideUp 0.3s ease"
+      }}>
+        {/* Header */}
+        <div style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "22px 28px", color: "white" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px" }}>⚠️</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800" }}>Similar Complaint Found</h3>
+                <p style={{ margin: "2px 0 0 0", fontSize: "12px", opacity: 0.85 }}>A matching grievance already exists in this area</p>
+              </div>
+            </div>
+            <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "34px", height: "34px", cursor: "pointer", color: "white", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: "24px 28px" }}>
+          {/* Alert banner */}
+          <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: "10px", padding: "14px 16px", marginBottom: "20px" }}>
+            <p style={{ margin: 0, fontSize: "13.5px", color: "#92400e", fontWeight: "600", lineHeight: 1.5 }}>
+              🔍 We detected a complaint with the <strong>same category</strong> and <strong>similar location</strong> already registered. Instead of filing a duplicate, you can <strong>upvote</strong> the existing complaint to increase its priority.
+            </p>
+          </div>
+
+          {/* Existing complaint card */}
+          <div style={{ border: "1.5px solid #e2e8f0", borderRadius: "12px", overflow: "hidden", marginBottom: "20px" }}>
+            <div style={{ background: "#f8fafc", padding: "12px 16px", borderBottom: "1.5px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "11px", fontWeight: "800", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>Existing Complaint</span>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: "5px", padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700",
+                background: complaint.status === "Resolved" ? "#dcfce7" : (complaint.status === "In Progress" ? "#f3e8ff" : (complaint.status === "Assigned" ? "#dbeafe" : "#fef3c7")),
+                color: complaint.status === "Resolved" ? "#16a34a" : (complaint.status === "In Progress" ? "#7c3aed" : (complaint.status === "Assigned" ? "#2563eb" : "#d97706"))
+              }}>
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "currentColor" }} />
+                {complaint.status}
+              </span>
+            </div>
+            <div style={{ padding: "16px" }}>
+              <h4 style={{ margin: "0 0 6px 0", fontSize: "16px", fontWeight: "800", color: "#1e293b" }}>{complaint.title}</h4>
+              <p style={{ margin: "0 0 12px 0", fontSize: "13px", color: "#64748b", lineHeight: 1.5 }}>{complaint.description}</p>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase" }}>Category</span>
+                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#334155", marginTop: "2px" }}>{complaint.category}</div>
+                </div>
+                <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase" }}>Reported On</span>
+                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#334155", marginTop: "2px" }}>{displayDate}</div>
+                </div>
+                <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px", gridColumn: "span 2" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase" }}>Location / Address</span>
+                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#334155", marginTop: "2px" }}>{complaint.location}</div>
+                </div>
+                <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase" }}>Reported By</span>
+                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#334155", marginTop: "2px" }}>{citizenName}</div>
+                </div>
+                <div style={{ background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "800", color: "#94a3b8", textTransform: "uppercase" }}>Community Votes</span>
+                  <div style={{ fontSize: "13px", fontWeight: "700", color: "#334155", marginTop: "2px" }}>👍 {upvotes} upvotes</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: "12px" }}>
+            <button
+              onClick={handleUpvote}
+              disabled={hasUpvoted}
+              style={{
+                flex: 1, padding: "13px", border: "none", borderRadius: "10px", fontWeight: "800", fontSize: "14px", cursor: hasUpvoted ? "default" : "pointer",
+                background: hasUpvoted ? "#dcfce7" : "linear-gradient(135deg, #10b981, #059669)",
+                color: hasUpvoted ? "#16a34a" : "white",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                transition: "all 0.2s"
+              }}
+            >
+              {hasUpvoted ? (
+                <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12" /></svg> Upvoted Successfully!</>
+              ) : (
+                <><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg> Upvote This Complaint</>
+              )}
+            </button>
+            <button
+              onClick={onClose}
+              style={{
+                flex: 1, padding: "13px", background: "#f1f5f9", color: "#475569", border: "none", borderRadius: "10px", fontWeight: "700", fontSize: "14px", cursor: "pointer",
+                transition: "background 0.2s"
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#e2e8f0"}
+              onMouseLeave={e => e.currentTarget.style.background = "#f1f5f9"}
+            >
+              File Anyway
+            </button>
+          </div>
+
+          <p style={{ margin: "14px 0 0 0", fontSize: "11.5px", color: "#94a3b8", textAlign: "center", lineHeight: 1.5 }}>
+            Upvoting helps increase the priority of this issue. You can still file a new complaint by clicking "File Anyway".
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const Dashboard = () => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState("overview"); // 'overview', 'file', 'history'
   const [complaints, setComplaints] = useState([]);
+  const [allComplaints, setAllComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [duplicateComplaint, setDuplicateComplaint] = useState(null);
+  const [officers, setOfficers] = useState([]);
+
+  const fetchOfficers = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/authorities`);
+      if (res.data && res.data.success) {
+        const list = res.data.authorities.filter(auth => auth.department !== "Admin");
+        setOfficers(list);
+      }
+    } catch (err) {
+      console.warn("Could not fetch officers.", err);
+    }
+  };
 
   // Form state
   const [title, setTitle] = useState("");
@@ -744,13 +914,16 @@ const Dashboard = () => {
     try {
       if (user) {
         const res = await axios.get(`${API_BASE_URL}/api/complaints`);
-        const userComplaints = res.data.complaints.filter(c => c.user?._id === user._id || c.userId === user._id);
+        const all = res.data.complaints || [];
+        setAllComplaints(all);
+        const userComplaints = all.filter(c => c.user?._id === user._id || c.userId === user._id);
         setComplaints(userComplaints);
       }
     } catch (err) {
       console.warn("Backend not available. Loading from local storage fallback.", err);
       const saved = localStorage.getItem("complaints") || "[]";
       const parsed = JSON.parse(saved);
+      setAllComplaints(parsed);
       const userComplaints = parsed.filter(c => c.citizenName === user?.name || c.user?.name === user?.name || c.userId === user?._id);
       setComplaints(userComplaints);
     } finally {
@@ -760,6 +933,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchComplaints();
+    fetchOfficers();
   }, []);
 
   const getGeotag = () => {
@@ -782,6 +956,53 @@ const Dashboard = () => {
         setGeoError("Location permission denied. You can still submit, but it won't be geotagged.");
       },
       { enableHighAccuracy: true, timeout: 5000 }
+    );
+  };
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setError("");
+    setGeoError("");
+    setLocation("Detecting location...");
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setLatitude(lat);
+        setLongitude(lng);
+        setCapturedAt(new Date().toISOString());
+
+        try {
+          const res = await axios.get(`https://nominatim.openstreetmap.org/reverse`, {
+            params: {
+              format: "json",
+              lat: lat,
+              lon: lng,
+              zoom: 18,
+              addressdetails: 1
+            }
+          });
+          if (res.data && res.data.display_name) {
+            setLocation(res.data.display_name);
+          } else {
+            setLocation(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+          }
+        } catch (err) {
+          console.warn("Reverse geocoding failed", err);
+          setLocation(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+        }
+      },
+      (err) => {
+        console.warn("Geolocation failed:", err);
+        setError("Could not retrieve current location. Please type manually.");
+        setLocation("");
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
     );
   };
 
@@ -846,12 +1067,54 @@ const Dashboard = () => {
     }
   };
 
+  // Helper: normalize a location string for fuzzy comparison
+  const normalizeLocation = (loc) => {
+    if (!loc) return "";
+    return loc.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  };
+
+  // Helper: check if two location strings are similar
+  const locationsAreSimilar = (loc1, loc2) => {
+    const n1 = normalizeLocation(loc1);
+    const n2 = normalizeLocation(loc2);
+    if (!n1 || !n2) return false;
+    // Exact match
+    if (n1 === n2) return true;
+    // One contains the other
+    if (n1.includes(n2) || n2.includes(n1)) return true;
+    // Check word overlap: if >=50% of words match
+    const words1 = n1.split(" ").filter(w => w.length > 2);
+    const words2 = n2.split(" ").filter(w => w.length > 2);
+    if (words1.length === 0 || words2.length === 0) return false;
+    const commonWords = words1.filter(w => words2.includes(w));
+    const overlapRatio = commonWords.length / Math.min(words1.length, words2.length);
+    return overlapRatio >= 0.5;
+  };
+
+  // Find duplicate complaint from all complaints
+  const findDuplicateComplaint = () => {
+    return allComplaints.find(c => {
+      if (c.status === "Resolved" || c.status === "Rejected") return false;
+      const sameCategory = c.category === category;
+      const similarLocation = locationsAreSimilar(c.location, location);
+      return sameCategory && similarLocation;
+    });
+  };
+
   const handleSubmitComplaint = async (e) => {
     e.preventDefault();
     if (!title || !description || !location) {
       setError("Please fill in all required fields.");
       return;
     }
+
+    // Check for duplicate complaint
+    const existing = findDuplicateComplaint();
+    if (existing) {
+      setDuplicateComplaint(existing);
+      return;
+    }
+
     setError("");
     setSuccess("");
     setIsSubmitting(true);
@@ -1081,9 +1344,40 @@ const Dashboard = () => {
                     {priority}
                   </div>
                 </div>
-                <div>
+                <div style={{ gridColumn: "span 2" }}>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: "800", color: "#475569", textTransform: "uppercase", marginBottom: "6px" }}>Location (Area/Address) *</label>
-                  <input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Sector 12 block B, Delhi" required style={{ width: "100%", padding: "10px 14px", border: "1.5px solid #cbd5e1", borderRadius: "8px", fontSize: "14px" }} />
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <input 
+                      value={location} 
+                      onChange={e => setLocation(e.target.value)} 
+                      placeholder="e.g. Sector 12 block B, Delhi" 
+                      required 
+                      style={{ flex: 1, padding: "10px 14px", border: "1.5px solid #cbd5e1", borderRadius: "8px", fontSize: "14px" }} 
+                    />
+                    <button 
+                      type="button" 
+                      onClick={handleDetectLocation}
+                      style={{ 
+                        padding: "10px 16px", 
+                        background: "#3b82f6", 
+                        color: "white", 
+                        border: "none", 
+                        borderRadius: "8px", 
+                        fontWeight: "700", 
+                        fontSize: "13px", 
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        whiteSpace: "nowrap",
+                        transition: "background 0.2s"
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#2563eb"}
+                      onMouseLeave={e => e.currentTarget.style.background = "#3b82f6"}
+                    >
+                      📍 Detect Location
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1243,7 +1537,94 @@ const Dashboard = () => {
       {selectedComplaint && (
         <GrievanceDetailsModal 
           complaint={selectedComplaint}
+          officers={officers}
           onClose={() => setSelectedComplaint(null)}
+        />
+      )}
+
+      {/* Duplicate Complaint Warning Modal */}
+      {duplicateComplaint && (
+        <DuplicateComplaintModal
+          complaint={duplicateComplaint}
+          onClose={() => {
+            // "File Anyway" — bypass duplicate check and force-submit
+            setDuplicateComplaint(null);
+            // Programmatically submit (reuse the submit logic without duplicate check)
+            (async () => {
+              setError("");
+              setSuccess("");
+              setIsSubmitting(true);
+
+              const newComplaint = {
+                id: "C" + Math.floor(100 + Math.random() * 900),
+                _id: Math.random().toString(36).substring(7),
+                title,
+                description,
+                category,
+                priority,
+                location,
+                latitude,
+                longitude,
+                image: previewImage,
+                imageUrl: previewImage,
+                capturedAt: capturedAt || new Date().toISOString(),
+                date: new Date().toISOString().split('T')[0],
+                createdAt: new Date().toISOString(),
+                status: "Pending",
+                citizenName: user?.name || "Sonu Kumar",
+                userId: user?._id,
+                assignedOfficer: null,
+                adminNotes: "",
+                workLogs: []
+              };
+
+              const saved = JSON.parse(localStorage.getItem("complaints") || "[]");
+              const updatedList = [newComplaint, ...saved];
+              localStorage.setItem("complaints", JSON.stringify(updatedList));
+
+              try {
+                const formData = new FormData();
+                formData.append("title", title);
+                formData.append("description", description);
+                formData.append("category", category);
+                formData.append("priority", priority);
+                formData.append("location", location);
+                formData.append("latitude", latitude);
+                formData.append("longitude", longitude);
+                formData.append("userId", user?._id);
+                if (capturedAt) formData.append("capturedAt", capturedAt);
+                if (image) formData.append("image", image);
+                await axios.post(`${API_BASE_URL}/api/complaints`, formData);
+              } catch (err) {
+                console.warn("Could not post to backend.", err);
+              }
+
+              setComplaints([newComplaint, ...complaints]);
+              setSuccess("Complaint registered successfully!");
+              setIsSubmitting(false);
+
+              setTitle("");
+              setDescription("");
+              setCategory("Roads");
+              setLocation("");
+              setImage(null);
+              setPreviewImage(null);
+              setLatitude(28.6139);
+              setLongitude(77.209);
+              setCapturedAt(null);
+              setGeoError("");
+
+              setTimeout(() => {
+                setActiveTab("history");
+                setSuccess("");
+              }, 1500);
+            })();
+          }}
+          onUpvote={() => {
+            setDuplicateComplaint(null);
+            setSuccess("Thanks for upvoting! Your support helps prioritize this issue.");
+            setTimeout(() => setSuccess(""), 3000);
+          }}
         />
       )}
     </div>
